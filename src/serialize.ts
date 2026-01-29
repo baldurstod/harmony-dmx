@@ -33,6 +33,8 @@ export function serializeDmxTextWithLines(dmx: Dmx): { text: string, elementsLin
 
 	const context: SerializeContext = { tabs: 0, inlineSubElements: inlineElements, line: 1, elementsLine: new Map<string, number>() };
 
+	lines.push(`<!-- dmx encoding keyvalues2 4 format ${dmx.format} ${dmx.version} -->`);
+	++context.line;
 	lines.push(dmxElementToSTring(root, context));
 	++context.line;
 

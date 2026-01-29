@@ -170,6 +170,8 @@ function serializeDmxTextWithLines(dmx) {
     const lines = [];
     const inlineElements = inlineSubElements(root);
     const context = { tabs: 0, inlineSubElements: inlineElements, line: 1, elementsLine: new Map() };
+    lines.push(`<!-- dmx encoding keyvalues2 4 format ${dmx.format} ${dmx.version} -->`);
+    ++context.line;
     lines.push(dmxElementToSTring(root, context));
     ++context.line;
     for (const [subElement, inline] of inlineElements) {
