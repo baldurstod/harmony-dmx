@@ -1,8 +1,10 @@
 import { vec2, vec3, vec4 } from 'gl-matrix';
 import { Color } from 'harmony-utils';
 import { Dmx } from './dmx';
-import { DmxAttribute, DmxAttributeType } from './dmxattribute';
+import { DmxAttribute, DmxAttributeType, DmxAttributeValue } from './dmxattribute';
 import { DmxElement } from './dmxelement';
+
+const FLOAT_DECIMALS = 6;
 
 type SerializeContext = {
 	tabs: number;
@@ -127,36 +129,38 @@ function dmxAttributeToSTring(name: string, attribute: DmxAttribute, context: Se
 
 	line = `"${name}"`;
 
-	switch (attribute.type) {
+	const attributeType = attribute.type;
+	const attributeValue = attribute.value;
+	switch (attributeType) {
 		case DmxAttributeType.Element:
-			line += ` "element" "${(attribute.value as (DmxElement | null))?.id ?? 'null'}"`;
+			line += ` "element" "${(attributeValue as (DmxElement | null))?.id ?? 'null'}"`;
 			break;
 		case DmxAttributeType.Integer:
-			line += ` "int" ${attribute.value}`;
+			line += ` "int" ${attributeValue}`;
 			break;
 		case DmxAttributeType.Float:
-			line += ` "float" ${attribute.value}`;
+			line += ` "float" ${attributeValue}`;
 			break;
 		case DmxAttributeType.Boolean:
-			line += ` "bool" ${attribute.value ? '1' : '0'}`;
+			line += ` "bool" ${attributeValue ? '1' : '0'}`;
 			break;
 		case DmxAttributeType.String:
-			line += ` "string" "${attribute.value}"`;
+			line += ` "string" "${attributeValue}"`;
 			break;
 		case DmxAttributeType.Color:
-			line += ` "color" "${(attribute.value as Color).red * 255} ${(attribute.value as Color).green * 255} ${(attribute.value as Color).blue * 255} ${(attribute.value as Color).alpha * 255}"`;
+			line += ` "color" "${getAttributeValue(attributeType, attributeValue)}"`;
 			break;
 		case DmxAttributeType.Vec2:
-			line += ` "vector2" "${(attribute.value as vec2)[0]} ${(attribute.value as vec2)[1]}"`;
+			line += ` "vector2" "${getAttributeValue(attributeType, attributeValue)}"`;
 			break;
 		case DmxAttributeType.Vec3:
-			line += ` "vector3" "${(attribute.value as vec3)[0]} ${(attribute.value as vec3)[1]} ${(attribute.value as vec3)[2]}"`;
+			line += ` "vector3" "${getAttributeValue(attributeType, attributeValue)}"`;
 			break;
 		case DmxAttributeType.Vec4:
-			line += ` "vector4" "${(attribute.value as vec4)[0]} ${(attribute.value as vec4)[1]} ${(attribute.value as vec4)[2]} ${(attribute.value as vec4)[3]}"`;
+			line += ` "vector4" "${getAttributeValue(attributeType, attributeValue)}"`;
 			break;
 		case DmxAttributeType.Quaternion:
-			line += ` "quaternion" "${(attribute.value as vec4)[0]} ${(attribute.value as vec4)[1]} ${(attribute.value as vec4)[2]} ${(attribute.value as vec4)[3]}"`;
+			line += ` "quaternion" "${getAttributeValue(attributeType, attributeValue)}"`;
 			break;
 		case DmxAttributeType.ElementArray:
 			line += ' "element_array"\n';
@@ -165,18 +169,80 @@ function dmxAttributeToSTring(name: string, attribute: DmxAttribute, context: Se
 			line += '[\n';
 			++context.line;
 			++context.tabs;
-			line += dmxElementsToSTring(attribute.value as DmxElement[], context);
+			line += dmxElementsToSTring(attributeValue as DmxElement[], context);
 			line += '\n';
 			++context.line;
 			--context.tabs;
 			line += makeTabs(context.tabs);
 			line += ']';
 			break;
+		case DmxAttributeType.IntegerArray:
+		case DmxAttributeType.FloatArray:
+		case DmxAttributeType.Vec2Array:
+		case DmxAttributeType.Vec3Array:
+		case DmxAttributeType.Vec4Array:
+		case DmxAttributeType.QuaternionArray:
+			line += ` "${getAttributeTypeName(attribute.type)}_array" [`;
+			for (let i = 0, len = (attributeValue as number[]).length; i < len; i++) {
+				const value = (attributeValue as number[])[i]!;
+				line += ` "${getAttributeValue(attributeType, value)}"`;
+				if (i < len - 1) {
+					line += ',';
+				}
+			}
+			line += ' ]';
+			break;
 		default:
 			console.error('do type ', attribute.type, attribute);
 	}
 
 	return line;
+}
+
+function getAttributeTypeName(type: DmxAttributeType): string {
+	switch (type % 14) {
+		case DmxAttributeType.Element: return 'element';
+		case DmxAttributeType.Integer: return 'int';
+		case DmxAttributeType.Float: return 'float';
+		case DmxAttributeType.Boolean: return 'bool';
+		case DmxAttributeType.String: return 'string';
+		case DmxAttributeType.Binary: return 'binary';
+		case DmxAttributeType.Color: return 'color';
+		case DmxAttributeType.Vec2: return 'vector2';
+		case DmxAttributeType.Vec3: return 'vector3';
+		case DmxAttributeType.Vec4: return 'vector4';
+		case DmxAttributeType.QAngle: return 'qangle';
+		case DmxAttributeType.Quaternion: return 'quaternion';
+		case DmxAttributeType.VMatrix: return 'matrix';
+		default: return '';
+	}
+}
+
+function toFixed(input: number): string {
+	return String(+input.toFixed(FLOAT_DECIMALS));
+}
+
+function getAttributeValue(type: DmxAttributeType, value: DmxAttributeValue): string {
+	switch (type % 14) {
+		case DmxAttributeType.Integer:
+			return `${value}`;
+		case DmxAttributeType.Float:
+			return toFixed(value as number);
+		case DmxAttributeType.Color:
+			return `${(value as Color).red * 255} ${(value as Color).green * 255} ${(value as Color).blue * 255} ${(value as Color).alpha * 255}`;
+		case DmxAttributeType.Vec2:
+			return `${toFixed((value as vec2)[0])} ${toFixed((value as vec2)[1])}`;
+		case DmxAttributeType.Vec3:
+			return `${toFixed((value as vec3)[0])} ${toFixed((value as vec3)[1])} ${toFixed((value as vec3)[2])}`;
+		case DmxAttributeType.Vec4:
+		case DmxAttributeType.Quaternion:
+			return `${toFixed((value as vec4)[0])} ${toFixed((value as vec4)[1])} ${toFixed((value as vec4)[2])} ${toFixed((value as vec4)[3])}`;
+		//case DmxAttributeType.QAngle: return 'qangle';
+		//case DmxAttributeType.VMatrix: return 'matrix';
+		default:
+			console.error('TODO: getAttributeValue for', type);
+			return '';
+	}
 }
 
 function dmxElementsToSTring(elements: DmxElement[], context: SerializeContext): string {
