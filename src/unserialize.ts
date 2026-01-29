@@ -1,4 +1,4 @@
-import { vec2, vec3, vec4 } from 'gl-matrix';
+import { quat, vec2, vec3, vec4 } from 'gl-matrix';
 import { BinaryReader } from 'harmony-binary-reader';
 import { Color } from 'harmony-utils';
 import { Dmx } from './dmx';
@@ -109,20 +109,18 @@ function unserializeHeader(context: UnserializeContext, startOffset: number): vo
 	for (let i = 0; i < nStrings; ++i) {
 		context.strings.push(reader.getNullString());
 	}
-	//console.info(context.strings);
 
 	nElements = reader.getUint32();
-	const elements: DmxElement[] = new Array(nElements);
+	context.elements = new Array(nElements);
+	const elements = context.elements;
 
 	for (let i = 0; i < nElements; i++) {
-		//context.elements.push(this.#parseElement(reader, pcf));
 		elements[i] = unserializeElement(context);
 	}
 
 	for (let i = 0; i < nElements; i++) {
-		//unserializeAttributes(context, elements[i]);
 		const nAttributes = context.reader.getUint32();
-		for (let i = 0; i < nAttributes; ++i) {
+		for (let j = 0; j < nAttributes; ++j) {
 			unserializeAttribute(context, elements[i]!);
 		}
 	}
@@ -231,6 +229,9 @@ function unserializeValue(context: UnserializeContext, type: number): DmxAttribu
 			break;
 		case DmxAttributeType.Vec4:
 			value = vec4.fromValues(reader.getFloat32(), reader.getFloat32(), reader.getFloat32(), reader.getFloat32());
+			break;
+		case DmxAttributeType.Quaternion:
+			value = quat.fromValues(reader.getFloat32(), reader.getFloat32(), reader.getFloat32(), reader.getFloat32());
 			break;
 		case DmxAttributeType.String:
 			if (context.encodingVersion < 5) {

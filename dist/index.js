@@ -1,4 +1,4 @@
-import { vec4, vec3, vec2 } from 'gl-matrix';
+import { quat, vec4, vec3, vec2 } from 'gl-matrix';
 import { BinaryReader } from 'harmony-binary-reader';
 import { Color } from 'harmony-utils';
 
@@ -154,6 +154,144 @@ class DmxElement {
     }
 }
 
+function serializeDmxText(dmx) {
+    const root = dmx.root;
+    if (!root) {
+        return null;
+    }
+    const lines = [];
+    const inlineElements = inlineSubElements(root);
+    const context = { tabs: 0, inlineSubElements: inlineElements };
+    lines.push(dmxElementToSTring(root, context));
+    for (const [subElement, inline] of inlineElements) {
+        if (!inline) {
+            lines.push(dmxElementToSTring(subElement, context));
+            lines.push('');
+        }
+    }
+    return lines.join('\n');
+}
+function inlineSubElements(element) {
+    const subs = new Map();
+    const done = new Set();
+    let current;
+    const stack = [element];
+    do {
+        current = stack.pop();
+        if (!current || done.has(current)) {
+            continue;
+        }
+        done.add(current);
+        if (subs.has(current)) {
+            subs.set(current, false);
+        }
+        else {
+            subs.set(current, true);
+        }
+        for (const [, attribute] of current.attributes) {
+            switch (attribute.type) {
+                case DmxAttributeType.Element:
+                    // prevent inlining
+                    subs.set(attribute.value, false);
+                    stack.push(attribute.value);
+                    break;
+                case DmxAttributeType.ElementArray:
+                    for (const subElement of attribute.value) {
+                        stack.push(subElement);
+                    }
+                    break;
+            }
+        }
+    } while (current);
+    return subs;
+}
+function dmxElementToSTring(element, context) {
+    let lines = [];
+    lines.push(makeTabs(context.tabs) + `"${element?.class}"`);
+    lines.push(makeTabs(context.tabs) + '{');
+    ++context.tabs;
+    lines.push(makeTabs(context.tabs) + `"id" "elementid" "${element?.id}"`);
+    lines.push(makeTabs(context.tabs) + `"name" "string" "${element?.name}"`);
+    if (element) {
+        for (const [name, attribute] of element.attributes) {
+            lines.push(makeTabs(context.tabs) + dmxAttributeToSTring(name, attribute, context));
+        }
+    }
+    --context.tabs;
+    lines.push(makeTabs(context.tabs) + '}');
+    //++context.line;
+    return lines.join('\n');
+}
+function dmxAttributeToSTring(name, attribute, context) {
+    let line = makeTabs(context.tabs);
+    line = `"${name}"`;
+    switch (attribute.type) {
+        case DmxAttributeType.Element:
+            line += ` "element" "${attribute.value?.id ?? 'null'}"`;
+            break;
+        case DmxAttributeType.Integer:
+            line += ` "int" ${attribute.value}`;
+            break;
+        case DmxAttributeType.Float:
+            line += ` "float" ${attribute.value}`;
+            break;
+        case DmxAttributeType.Boolean:
+            line += ` "bool" ${attribute.value ? '1' : '0'}`;
+            break;
+        case DmxAttributeType.String:
+            line += ` "string" "${attribute.value}"`;
+            break;
+        case DmxAttributeType.Color:
+            line += ` "color" "${attribute.value.red * 255} ${attribute.value.green * 255} ${attribute.value.blue * 255} ${attribute.value.alpha * 255}"`;
+            break;
+        case DmxAttributeType.Vec2:
+            line += ` "vector2" "${attribute.value[0]} ${attribute.value[1]}"`;
+            break;
+        case DmxAttributeType.Vec3:
+            line += ` "vector3" "${attribute.value[0]} ${attribute.value[1]} ${attribute.value[2]}"`;
+            break;
+        case DmxAttributeType.Vec4:
+            line += ` "vector4" "${attribute.value[0]} ${attribute.value[1]} ${attribute.value[2]} ${attribute.value[3]}"`;
+            break;
+        case DmxAttributeType.Quaternion:
+            line += ` "quaternion" "${attribute.value[0]} ${attribute.value[1]} ${attribute.value[2]} ${attribute.value[3]}"`;
+            break;
+        case DmxAttributeType.ElementArray:
+            line += ' "element_array"\n';
+            line += makeTabs(context.tabs);
+            line += '[\n';
+            ++context.tabs;
+            line += dmxElementsToSTring(attribute.value, context);
+            line += '\n';
+            --context.tabs;
+            line += makeTabs(context.tabs);
+            line += ']';
+            break;
+        default:
+            console.error('do type ', attribute.type, attribute);
+    }
+    return line;
+}
+function dmxElementsToSTring(elements, context) {
+    let lines = [];
+    for (const element of elements) {
+        if (context.inlineSubElements.get(element)) {
+            lines.push(dmxElementToSTring(element, context) + ',');
+        }
+        else {
+            lines.push(`${makeTabs(context.tabs)}${element.name} "element" "${element.id}",`);
+        }
+    }
+    return lines.join('\n');
+}
+function makeTabs(count) {
+    let s = '';
+    for (let i = 0; i < count; i++) {
+        s += '\t';
+    }
+    return s;
+}
+
 const dataSize = [
     0, 4, 4, 4, 1, 0, 0, 4, 4, 8, 12, 16, 12, 16, 64,
     4, 4, 4, 1, 0, 0, 4, 4, 8, 12, 16, 12, 16, 64,
@@ -227,17 +365,15 @@ function unserializeHeader(context, startOffset) {
     for (let i = 0; i < nStrings; ++i) {
         context.strings.push(reader.getNullString());
     }
-    //console.info(context.strings);
     nElements = reader.getUint32();
-    const elements = new Array(nElements);
+    context.elements = new Array(nElements);
+    const elements = context.elements;
     for (let i = 0; i < nElements; i++) {
-        //context.elements.push(this.#parseElement(reader, pcf));
         elements[i] = unserializeElement(context);
     }
     for (let i = 0; i < nElements; i++) {
-        //unserializeAttributes(context, elements[i]);
         const nAttributes = context.reader.getUint32();
-        for (let i = 0; i < nAttributes; ++i) {
+        for (let j = 0; j < nAttributes; ++j) {
             unserializeAttribute(context, elements[i]);
         }
     }
@@ -333,6 +469,9 @@ function unserializeValue(context, type) {
         case DmxAttributeType.Vec4:
             value = vec4.fromValues(reader.getFloat32(), reader.getFloat32(), reader.getFloat32(), reader.getFloat32());
             break;
+        case DmxAttributeType.Quaternion:
+            value = quat.fromValues(reader.getFloat32(), reader.getFloat32(), reader.getFloat32(), reader.getFloat32());
+            break;
         case DmxAttributeType.String:
             if (context.encodingVersion < 5) {
                 value = reader.getNullString();
@@ -381,4 +520,4 @@ function unserializeText(context) {
     throw new Error('TODO');
 }
 
-export { Dmx, DmxAttribute, DmxAttributeType, DmxElement, guidToString, unserializeDmx, unserializeDmxSync };
+export { Dmx, DmxAttribute, DmxAttributeType, DmxElement, guidToString, serializeDmxText, unserializeDmx, unserializeDmxSync };
