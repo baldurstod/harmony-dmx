@@ -212,7 +212,7 @@ function inlineSubElements(element) {
                     break;
             }
         }
-    } while (current);
+    } while (stack.length);
     return subs;
 }
 function dmxElementToSTring(element, context) {

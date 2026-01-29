@@ -45,7 +45,6 @@ export async function unserializeDmx(content: File | string | ArrayBuffer): Prom
 }
 
 export function unserializeDmxSync(content: string | ArrayBuffer): Dmx | null {
-
 	return unserialize(new BinaryReader(content));
 }
 

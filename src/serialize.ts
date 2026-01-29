@@ -79,7 +79,7 @@ function inlineSubElements(element: DmxElement): Map<DmxElement, boolean> {
 					break;
 			}
 		}
-	} while (current);
+	} while (stack.length);
 
 	return subs;
 }
