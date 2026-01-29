@@ -3,8 +3,10 @@
   "version": "0.0.1",
   "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "clear && npx eslint ./src/",
+    "test": "clear && rollup -c && node test/test.js"
   },
   "repository": {
     "type": "git",
@@ -16,10 +18,14 @@
   "homepage": "https://github.com/baldurstod/harmony-dmx#readme",
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.3.0",
+    "eslint": "^9.39.2",
     "rollup": "^4.57.0",
-    "tslib": "^2.8.1"
+    "tslib": "^2.8.1",
+    "typescript-eslint": "^8.54.0"
   },
   "dependencies": {
-    "harmony-binary-reader": "github:baldurstod/harmony-binary-reader"
+    "gl-matrix": "^3.4.4",
+    "harmony-binary-reader": "github:baldurstod/harmony-binary-reader",
+    "harmony-utils": "github:baldurstod/harmony-utils"
   }
 }

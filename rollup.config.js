@@ -21,7 +21,9 @@ export default [
 			},
 		],
 		external: [
+			'gl-matrix',
 			'harmony-binary-reader',
+			'harmony-utils',
 		],
 	},
 ];
@@ -35,7 +37,7 @@ async function postBuildCommands() {
 			if (error) {
 				console.log(error);
 			}
-			resolve("done")
+			resolve('done')
 		},
 	));
 }
