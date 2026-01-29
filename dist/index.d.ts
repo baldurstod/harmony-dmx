@@ -97,6 +97,11 @@ export declare function guidToString(bytes: Uint8Array): string;
 
 export declare function serializeDmxText(dmx: Dmx): string | null;
 
+export declare function serializeDmxTextWithLines(dmx: Dmx): {
+    text: string;
+    elementsLine: Map<string, number>;
+} | null;
+
 export declare function unserializeDmx(content: File | string | ArrayBuffer): Promise<Dmx | null>;
 
 export declare function unserializeDmxSync(content: string | ArrayBuffer): Dmx | null;

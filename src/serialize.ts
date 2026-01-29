@@ -7,9 +7,19 @@ import { DmxElement } from './dmxelement';
 type SerializeContext = {
 	tabs: number;
 	inlineSubElements: Map<DmxElement, boolean>;
+	line: number;
+	elementsLine: Map<string, number>;
 }
 
 export function serializeDmxText(dmx: Dmx): string | null {
+	const result = serializeDmxTextWithLines(dmx);
+	if (result) {
+		return result.text;
+	}
+	return null;
+}
+
+export function serializeDmxTextWithLines(dmx: Dmx): { text: string, elementsLine: Map<string, number> } | null {
 	const root = dmx.root;
 	if (!root) {
 		return null;
@@ -19,18 +29,21 @@ export function serializeDmxText(dmx: Dmx): string | null {
 
 	const inlineElements = inlineSubElements(root);
 
-	const context: SerializeContext = { tabs: 0, inlineSubElements: inlineElements };
+	const context: SerializeContext = { tabs: 0, inlineSubElements: inlineElements, line: 1, elementsLine: new Map<string, number>() };
 
 	lines.push(dmxElementToSTring(root, context));
+	++context.line;
 
 	for (const [subElement, inline] of inlineElements) {
 		if (!inline) {
 			lines.push(dmxElementToSTring(subElement, context));
+			++context.line;
 			lines.push('');
+			++context.line;
 		}
 	}
 
-	return lines.join('\n');
+	return { text: lines.join('\n'), elementsLine: context.elementsLine };
 }
 
 function inlineSubElements(element: DmxElement): Map<DmxElement, boolean> {
@@ -74,15 +87,32 @@ function inlineSubElements(element: DmxElement): Map<DmxElement, boolean> {
 function dmxElementToSTring(element: DmxElement | null, context: SerializeContext): string {
 	let lines: string[] = [];
 
+	if (element) {
+		context.elementsLine.set(element.id, context.line);
+	}
+	let isDmeParticleSystemDefinition = false;
+
+	if (element?.name == 'DmeParticleSystemDefinition') {
+		isDmeParticleSystemDefinition = true;
+	}
+
 	lines.push(makeTabs(context.tabs) + `"${element?.class}"`);
+	++context.line;
 	lines.push(makeTabs(context.tabs) + '{');
+	++context.line;
 	++context.tabs;
 	lines.push(makeTabs(context.tabs) + `"id" "elementid" "${element?.id}"`);
+	if (element && isDmeParticleSystemDefinition) {
+		context.elementsLine.set(element.name, context.line);
+	}
+	++context.line;
 	lines.push(makeTabs(context.tabs) + `"name" "string" "${element?.name}"`);
+	++context.line;
 
 	if (element) {
 		for (const [name, attribute] of element.attributes) {
 			lines.push(makeTabs(context.tabs) + dmxAttributeToSTring(name, attribute, context));
+			++context.line;
 		}
 	}
 
@@ -130,11 +160,14 @@ function dmxAttributeToSTring(name: string, attribute: DmxAttribute, context: Se
 			break;
 		case DmxAttributeType.ElementArray:
 			line += ' "element_array"\n';
+			++context.line;
 			line += makeTabs(context.tabs);
 			line += '[\n';
+			++context.line;
 			++context.tabs;
 			line += dmxElementsToSTring(attribute.value as DmxElement[], context);
 			line += '\n';
+			++context.line;
 			--context.tabs;
 			line += makeTabs(context.tabs);
 			line += ']';
@@ -152,10 +185,17 @@ function dmxElementsToSTring(elements: DmxElement[], context: SerializeContext):
 	for (const element of elements) {
 		if (context.inlineSubElements.get(element)) {
 			lines.push(dmxElementToSTring(element, context) + ',');
+			++context.line;
 		} else {
 			lines.push(`${makeTabs(context.tabs)}${element.name} "element" "${element.id}",`);
+			++context.line;
 		}
 	}
+
+	if (lines.length > 0) {
+		--context.line;
+	}
+
 	return lines.join('\n');
 }
 

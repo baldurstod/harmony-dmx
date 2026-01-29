@@ -155,21 +155,31 @@ class DmxElement {
 }
 
 function serializeDmxText(dmx) {
+    const result = serializeDmxTextWithLines(dmx);
+    if (result) {
+        return result.text;
+    }
+    return null;
+}
+function serializeDmxTextWithLines(dmx) {
     const root = dmx.root;
     if (!root) {
         return null;
     }
     const lines = [];
     const inlineElements = inlineSubElements(root);
-    const context = { tabs: 0, inlineSubElements: inlineElements };
+    const context = { tabs: 0, inlineSubElements: inlineElements, line: 1, elementsLine: new Map() };
     lines.push(dmxElementToSTring(root, context));
+    ++context.line;
     for (const [subElement, inline] of inlineElements) {
         if (!inline) {
             lines.push(dmxElementToSTring(subElement, context));
+            ++context.line;
             lines.push('');
+            ++context.line;
         }
     }
-    return lines.join('\n');
+    return { text: lines.join('\n'), elementsLine: context.elementsLine };
 }
 function inlineSubElements(element) {
     const subs = new Map();
@@ -207,14 +217,29 @@ function inlineSubElements(element) {
 }
 function dmxElementToSTring(element, context) {
     let lines = [];
+    if (element) {
+        context.elementsLine.set(element.id, context.line);
+    }
+    let isDmeParticleSystemDefinition = false;
+    if (element?.name == 'DmeParticleSystemDefinition') {
+        isDmeParticleSystemDefinition = true;
+    }
     lines.push(makeTabs(context.tabs) + `"${element?.class}"`);
+    ++context.line;
     lines.push(makeTabs(context.tabs) + '{');
+    ++context.line;
     ++context.tabs;
     lines.push(makeTabs(context.tabs) + `"id" "elementid" "${element?.id}"`);
+    if (element && isDmeParticleSystemDefinition) {
+        context.elementsLine.set(element.name, context.line);
+    }
+    ++context.line;
     lines.push(makeTabs(context.tabs) + `"name" "string" "${element?.name}"`);
+    ++context.line;
     if (element) {
         for (const [name, attribute] of element.attributes) {
             lines.push(makeTabs(context.tabs) + dmxAttributeToSTring(name, attribute, context));
+            ++context.line;
         }
     }
     --context.tabs;
@@ -258,11 +283,14 @@ function dmxAttributeToSTring(name, attribute, context) {
             break;
         case DmxAttributeType.ElementArray:
             line += ' "element_array"\n';
+            ++context.line;
             line += makeTabs(context.tabs);
             line += '[\n';
+            ++context.line;
             ++context.tabs;
             line += dmxElementsToSTring(attribute.value, context);
             line += '\n';
+            ++context.line;
             --context.tabs;
             line += makeTabs(context.tabs);
             line += ']';
@@ -277,10 +305,15 @@ function dmxElementsToSTring(elements, context) {
     for (const element of elements) {
         if (context.inlineSubElements.get(element)) {
             lines.push(dmxElementToSTring(element, context) + ',');
+            ++context.line;
         }
         else {
             lines.push(`${makeTabs(context.tabs)}${element.name} "element" "${element.id}",`);
+            ++context.line;
         }
+    }
+    if (lines.length > 0) {
+        --context.line;
     }
     return lines.join('\n');
 }
@@ -520,4 +553,4 @@ function unserializeText(context) {
     throw new Error('TODO');
 }
 
-export { Dmx, DmxAttribute, DmxAttributeType, DmxElement, guidToString, serializeDmxText, unserializeDmx, unserializeDmxSync };
+export { Dmx, DmxAttribute, DmxAttributeType, DmxElement, guidToString, serializeDmxText, serializeDmxTextWithLines, unserializeDmx, unserializeDmxSync };
