@@ -64,6 +64,9 @@ class DmxElement {
         this.class = clas;
         this.name = name;
     }
+    getAttribute(name) {
+        return this.attributes.get(name) ?? null;
+    }
     addAttribute(name, attribute) {
         this.attributes.set(name, attribute);
     }

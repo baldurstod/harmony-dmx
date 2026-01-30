@@ -62,6 +62,7 @@ export declare class DmxElement {
     name: string;
     readonly attributes: Map<string, DmxAttribute>;
     constructor(id: string, clas: string, name: string);
+    getAttribute(name: string): DmxAttribute | null;
     addAttribute(name: string, attribute: DmxAttribute): void;
     addElementAttribute(name: string, value: DmxElement): void;
     addIntegerAttribute(name: string, value: number): void;

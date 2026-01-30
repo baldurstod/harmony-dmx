@@ -14,6 +14,10 @@ export class DmxElement {
 		this.name = name;
 	}
 
+	getAttribute(name: string): DmxAttribute | null {
+		return this.attributes.get(name) ?? null;
+	}
+
 	addAttribute(name: string, attribute: DmxAttribute): void {
 		this.attributes.set(name, attribute);
 	}
