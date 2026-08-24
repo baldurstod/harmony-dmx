@@ -149,6 +149,9 @@ function dmxAttributeToSTring(name: string, attribute: DmxAttribute, context: Se
 		case DmxAttributeType.String:
 			line += ` "string" "${attributeValue}"`;
 			break;
+		case DmxAttributeType.Time:
+			line += ` "float" ${attribute.value as number}`;
+			break;
 		case DmxAttributeType.Color:
 			line += ` "color" "${getAttributeValue(attributeType, attributeValue)}"`;
 			break;

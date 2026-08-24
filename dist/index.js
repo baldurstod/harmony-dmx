@@ -274,6 +274,9 @@ function dmxAttributeToSTring(name, attribute, context) {
         case DmxAttributeType.String:
             line += ` "string" "${attributeValue}"`;
             break;
+        case DmxAttributeType.Time:
+            line += ` "float" ${attribute.value}`;
+            break;
         case DmxAttributeType.Color:
             line += ` "color" "${getAttributeValue(attributeType, attributeValue)}"`;
             break;
