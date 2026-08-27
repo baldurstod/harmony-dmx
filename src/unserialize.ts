@@ -233,9 +233,16 @@ function unserializeValue(context: UnserializeContext, type: number): DmxAttribu
 			value = quat.fromValues(reader.getFloat32(), reader.getFloat32(), reader.getFloat32(), reader.getFloat32());
 			break;
 		case DmxAttributeType.String:
-			if (context.encodingVersion < 5) {
+			// Read string depending on attribute type:
+			// - For single value, it depends on the encoding version
+			// - For arrays values, it it stored as an array of null terminated strings
+			if (context.encodingVersion < 5 || type > 15) {
+				// Single value with encoding version < 5 or string array
+				// Read a null terminated string
 				value = reader.getNullString();
 			} else {
+				// Single value with encoding version >= 5
+				// Read from dictionary
 				value = getString(context, reader.getInt32())
 			}
 			break;
@@ -263,11 +270,7 @@ function getString(context: UnserializeContext, index: number): string {
 
 function getElement(context: UnserializeContext, index: number): DmxElement | null {
 	const e = context.elements[index];
-	if (e) {
-		return e;
-	} else {
-		return null;
-	}
+	return e ?? null;
 }
 
 export function guidToString(bytes: Uint8Array): string {
