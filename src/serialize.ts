@@ -197,6 +197,8 @@ function dmxAttributeToSTring(name: string, attribute: DmxAttribute, context: Se
 		case DmxAttributeType.QuaternionArray:
 		case DmxAttributeType.StringArray:
 		case DmxAttributeType.TimeArray:
+		case DmxAttributeType.BooleanArray:
+		case DmxAttributeType.ColorArray:
 			line += ` "${getAttributeTypeName(attribute.type)}_array" [`;
 			for (let i = 0, len = (attributeValue as number[]).length; i < len; i++) {
 				const value = (attributeValue as number[])[i]!;
@@ -233,7 +235,7 @@ function getAttributeTypeName(type: DmxAttributeType): string {
 		default:
 			console.error(`missing type ${type} in getAttributeTypeName`);
 
-		return '';
+			return '';
 	}
 }
 
@@ -248,6 +250,8 @@ function getAttributeValue(type: DmxAttributeType, value: DmxAttributeValue): st
 		case DmxAttributeType.Float:
 		case DmxAttributeType.Time:
 			return toFixed(value as number);
+		case DmxAttributeType.Boolean:
+			return value ? '1' : '0';
 		case DmxAttributeType.Color:
 			return `${(value as Color).red * 255} ${(value as Color).green * 255} ${(value as Color).blue * 255} ${(value as Color).alpha * 255}`;
 		case DmxAttributeType.Vec2:
