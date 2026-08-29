@@ -274,6 +274,15 @@ function dmxAttributeToSTring(name, attribute, context) {
         case DmxAttributeType.String:
             line += ` "string" "${attributeValue}"`;
             break;
+        case DmxAttributeType.Binary:
+            if (attributeValue === undefined) {
+                line += ` "binary" ""`;
+            }
+            else {
+                // TODO: need test data
+                console.error('TODO: dmx text export binary type', attributeValue);
+            }
+            break;
         case DmxAttributeType.Time:
             line += ` "float" ${attribute.value}`;
             break;
@@ -312,6 +321,8 @@ function dmxAttributeToSTring(name, attribute, context) {
         case DmxAttributeType.Vec3Array:
         case DmxAttributeType.Vec4Array:
         case DmxAttributeType.QuaternionArray:
+        case DmxAttributeType.StringArray:
+        case DmxAttributeType.TimeArray:
             line += ` "${getAttributeTypeName(attribute.type)}_array" [`;
             for (let i = 0, len = attributeValue.length; i < len; i++) {
                 const value = attributeValue[i];
@@ -336,13 +347,16 @@ function getAttributeTypeName(type) {
         case DmxAttributeType.String: return 'string';
         case DmxAttributeType.Binary: return 'binary';
         case DmxAttributeType.Color: return 'color';
+        case DmxAttributeType.Time: return 'time';
         case DmxAttributeType.Vec2: return 'vector2';
         case DmxAttributeType.Vec3: return 'vector3';
         case DmxAttributeType.Vec4: return 'vector4';
         case DmxAttributeType.QAngle: return 'qangle';
         case DmxAttributeType.Quaternion: return 'quaternion';
         case DmxAttributeType.VMatrix: return 'matrix';
-        default: return '';
+        default:
+            console.error(`missing type ${type} in getAttributeTypeName`);
+            return '';
     }
 }
 function toFixed(input) {
@@ -353,6 +367,7 @@ function getAttributeValue(type, value) {
         case DmxAttributeType.Integer:
             return `${value}`;
         case DmxAttributeType.Float:
+        case DmxAttributeType.Time:
             return toFixed(value);
         case DmxAttributeType.Color:
             return `${value.red * 255} ${value.green * 255} ${value.blue * 255} ${value.alpha * 255}`;
@@ -363,6 +378,8 @@ function getAttributeValue(type, value) {
         case DmxAttributeType.Vec4:
         case DmxAttributeType.Quaternion:
             return `${toFixed(value[0])} ${toFixed(value[1])} ${toFixed(value[2])} ${toFixed(value[3])}`;
+        case DmxAttributeType.String:
+            return `${value}`;
         //case DmxAttributeType.QAngle: return 'qangle';
         //case DmxAttributeType.VMatrix: return 'matrix';
         default:
