@@ -199,15 +199,23 @@ function dmxAttributeToSTring(name: string, attribute: DmxAttribute, context: Se
 		case DmxAttributeType.TimeArray:
 		case DmxAttributeType.BooleanArray:
 		case DmxAttributeType.ColorArray:
-			line += ` "${getAttributeTypeName(attribute.type)}_array" [`;
+			line += ` "${getAttributeTypeName(attribute.type)}_array"\n`;
+			++context.line;
+			line += makeTabs(context.tabs);
+			line += '[\n';
+			++context.line;
+			++context.tabs;
 			for (let i = 0, len = (attributeValue as number[]).length; i < len; i++) {
 				const value = (attributeValue as number[])[i]!;
-				line += ` "${getAttributeValue(attributeType, value)}"`;
+				line += makeTabs(context.tabs) + `"${getAttributeValue(attributeType, value)}"`;
 				if (i < len - 1) {
 					line += ',';
 				}
+				line += '\n';
+				++context.line;
 			}
-			line += ' ]';
+			--context.tabs;
+			line += makeTabs(context.tabs) + ']';
 			break;
 		default:
 			console.error('do type ', attribute.type, attribute);
